@@ -489,9 +489,7 @@
   ```java
   package assembler;
   
-  import spring.ChangePasswordService;
-  import spring.MemberDao;
-  import spring.MemberRegisterService;
+  ...
   
   public class Assembler {
   	private MemberDao memberDao;
@@ -552,17 +550,7 @@
 ```java
 package main;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-
-import assembler.Assembler;
-import spring.ChangePasswordService;
-import spring.DuplicateMemberException;
-import spring.MemberNotFoundException;
-import spring.MemberRegisterService;
-import spring.RegisterRequest;
-import spring.WrongIdPasswordException;
+...
 
 public class MainForAssembler {
 
@@ -683,12 +671,7 @@ change molly@naver.com 1234 4321
     ```java
     package config;
     
-    import org.springframework.context.annotation.Bean;
-    import org.springframework.context.annotation.Configuration;
-    
-    import spring.ChangePasswordService;
-    import spring.MemberDao;
-    import spring.MemberRegisterService;
+    ...
     
     @Configuration
     public class AppCtx {
@@ -736,21 +719,7 @@ change molly@naver.com 1234 4321
   ```java
   package main;
   
-  import java.io.BufferedReader;
-  import java.io.IOException;
-  import java.io.InputStreamReader;
-  
-  import org.springframework.context.ApplicationContext;
-  import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-  
-  import assembler.Assembler;
-  import config.AppCtx;
-  import spring.ChangePasswordService;
-  import spring.DuplicateMemberException;
-  import spring.MemberNotFoundException;
-  import spring.MemberRegisterService;
-  import spring.RegisterRequest;
-  import spring.WrongIdPasswordException;
+  ...
   
   public class MainForSpring {
   
@@ -1047,7 +1016,7 @@ change molly@naver.com 1234 4321
   		System.out.println();
   	}
   
-  	public void setMemDao(MemberDao memDao) {
+  	public void setMemberDao(MemberDao memDao) {
   		this.memDao = memDao;
   	}
   
@@ -1078,23 +1047,7 @@ change molly@naver.com 1234 4321
   ```java
   package main;
   
-  import java.io.BufferedReader;
-  import java.io.IOException;
-  import java.io.InputStreamReader;
-  
-  import org.springframework.context.ApplicationContext;
-  import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-  
-  import assembler.Assembler;
-  import config.AppCtx;
-  import spring.ChangePasswordService;
-  import spring.DuplicateMemberException;
-  import spring.MemberInfoPrinter;
-  import spring.MemberListPrinter;
-  import spring.MemberNotFoundException;
-  import spring.MemberRegisterService;
-  import spring.RegisterRequest;
-  import spring.WrongIdPasswordException;
+  ...
   
   public class MainForSpring {
   
@@ -1241,3 +1194,351 @@ change molly@naver.com 1234 4321
   ```
 
   
+
+## 7. @Configuration 설정 클래스의 @Bean 설정과 싱글톤
+
+- `AppCtx` 클래스 코드 일부
+
+  ```java
+  @Configuration
+  public class AppCtx {
+  	
+  	@Bean
+  	public MemberDao memberDao() {
+  		return new MemberDao();
+  	}
+  	
+  	@Bean
+  	public MemberRegisterService memberRegSvc() {
+  		return new MemberRegisterService(memberDao());
+  	}
+  	
+  	@Bean
+  	public ChangePasswordService changePwdSvc() {
+  		ChangePasswordService pwdSvc = new ChangePasswordService();
+  		pwdSvc.setMemberDao(memberDao());
+  		return pwdSvc;
+  	}
+  	
+  	...
+  }
+  ```
+
+  - `memberRegSvc()`, `changePwdSvc()` 메서드 둘다 `memberDao()` 메서드를 실행한다
+    - 실행마다 새로운 MemberDao 객체가 리턴되나?
+    - **스프링 컨테이너가 생성한 빈은 싱글톤 객체이다**
+      - 즉 **항상 같은 객체가 리턴된다**
+
+- 스프링은 설정 클래스를 그대로 사용하지 않는다
+
+  - 설정 클래스를 상속한 새로운 설정 클래스를 만들어서 사용한다
+
+  - 가상 코드
+
+    ```java
+    public class AppCtxExt extends AppCtx{
+        private Map<String, Object> beans = ...;
+        
+        @Override
+        public MemberDao memberDao(){
+            if(!beans.containsKey("memberDao"))
+                beans.put("memberDao", super.memberDao())
+            
+            return (MemberDao)beans.get("memberDao");
+        }
+        ...
+    }
+    ```
+
+    - 한 번 생성한 객체를 보관했다가 이후에 동일한 객체를 리턴한다
+
+
+
+### 8. 두 개 이상의 설정 파일 사용하기
+
+- 설정하는 빈의 개수가 많아지면 영역별로 설정 파일을 나누면 관리하기 편한다
+
+- 스프링은 한 개 이상의 설정 파일을 이용해서 컨테이너를 생성할 수 있다
+
+- 두 설정 클래스 파일
+
+  ```java
+  @Configuration
+  public class AppConf1 {
+  	
+  	@Bean
+  	public MemberDao memberDao() {
+  		return new MemberDao();
+  	}
+  	
+  	@Bean
+  	public MemberPrinter memberPrinter() {
+  		return new MemberPrinter();
+  	}
+  }
+  ```
+
+  ```java
+  @Configuration
+  public class AppConf2 {
+  	
+  	@Autowired
+  	private MemberDao memberDao;
+  	@Autowired
+  	private MemberPrinter memberPrinter;
+  	
+  	@Bean
+  	public MemberRegisterService memberRegSvc() {
+  		return new MemberRegisterService(memberDao);
+  	}
+  	
+  	@Bean
+  	public ChangePasswordService changePwdSvc() {
+  		ChangePasswordService pwdSvc = new ChangePasswordService();
+  		pwdSvc.setMemberDao(memberDao);
+  		return pwdSvc;
+  	}
+  	
+  	@Bean
+  	public MemberListPrinter listPrinter() {
+  		return new MemberListPrinter(memberDao, memberPrinter);
+  	}
+  	
+  	@Bean
+  	public MemberInfoPrinter infoPrinter() {
+  		MemberInfoPrinter infoPrinter = new MemberInfoPrinter();
+  		infoPrinter.setMemberDao(memberDao);
+  		infoPrinter.setPrinter(memberPrinter);
+  		return infoPrinter;
+  	}
+  	
+  	@Bean
+  	public VersionPrinter versionPrinter() {
+  		VersionPrinter versionPrinter = new VersionPrinter();
+  		versionPrinter.setMajorVersion(5);
+  		versionPrinter.setMinorVersion(0);
+  		return versionPrinter;
+  	}
+  }
+  ```
+
+  - **`@Autowired` 애노테이션**은 **스프링의 자동 주입 기능**을 위한 것
+
+    - **해당 타입의 빈을 찾아서 필드에 할당한다**
+
+      > `AppConf2` 클래스에 `AppConf1`에서 설정한 빈(MemberDao)이 할당되었다
+
+- 설정 클래스가 두 개 이상일때, **스프링 컨테이너 생성 코드**
+
+  ```java
+  ctx = new AnnotationConfigApplicationContext(AppConf1.class, AppConf2.class);
+  ```
+
+  - `MainForSpring` 클래스에서 코드 변경하면 동일하게 작동
+
+### 8.1 @Configuration 애노테이션, 빈, @Autowired 애노테이션
+
+- `@Autowired` 애노테이션은 스프링 빈에 의존하는 다른 빈을 자동으로 주입하고 싶을 때 사용
+
+- `MemberInfoPrinter` 클래스 예시
+
+  ```java
+  public class MemberInfoPrinter {
+      @Autowired							//@Autowired 붙임
+  	private MemberDao memDao;
+      @Autowired
+  	private MemberPrinter printer;
+  	
+  	public void printMemberInfo(String email) {
+  		Member member = memDao.selectByEmail(email);
+  		
+  		if(member==null) {
+  			System.out.println("데이터 없음\n");
+  			return;
+  		}
+  		printer.print(member);
+  		System.out.println();
+  	}
+  
+  	...
+  	
+  }
+  ```
+
+  - 두 필드에 `@Autowired` 애노테이션 붙였다
+
+  - **`@Autowired` 애노테이션을 의존 주입 대상에 붙이면 스프링 설정 클래스의 `@Bean` 메서드에 의존 주입을 위한 코드를 작성하지 않아도 된다**
+
+    ```java
+    @Bean
+    public MemberInfoPrinter infoPrinter(){
+        MemberInfoPrinter infoPrinter = new MemberInfoPrinter();
+        //infoPrinter.setMemberDao(memberDao());
+    	//infoPrinter.setPrinter(memberPrinter());
+        // 세터를 통해 의존 주입하지 않아도 스프링 컨테이너가 @Autowired를 붙인 필드에 자동으로 해당 타입의 빈 객체를 주입
+        return infoPrinter
+    }
+    ```
+
+    
+
+- `AppConf2` 클래스
+
+  - **스프링 컨테이너는 설정 클래스에서 사용한 `@Autowired`에 대해서도 자동 주입을 처리한다**
+
+  ```java
+  @Configuration
+  public class AppConf2 {
+  	
+  	@Autowired
+  	private MemberDao memberDao;
+  	@Autowired
+  	private MemberPrinter memberPrinter;
+  	
+  	...
+  }
+  ```
+
+  - 실제로 스프링은 `@Configuration` 애노테이션이 붙은 설정 클래스를 내부적으로 스프링 빈으로 등록한다
+
+    - 그리고 `@Autowired`가 붙은 대상에 대해 알맞은 빈을 자동으로 주입한다
+
+    > 스프링 컨테이너는 `AppConf2` 객체를 빈으로 등록하고, `@Autowired` 애노테이션이 붙은 memberDao, memberPrinter에 해당 타입 빈 객체를 주입
+
+  - `@Configuration` 애노테이션을 붙인 설정 클래스를 빈으로 등록한 증거
+
+    ```java
+    AbstractApplicationContext ctx = AbstractApplicationContext(AppConf1.class, AppConf2.class);
+    
+    AppConf1 appConf1 = ctx.getBean(AppConf1.class);
+    System.out.println(appConf1 != null);	//true 출력
+    ```
+
+### 8.2 @Import 애노테이션 사용
+
+- `@Import` : 두 개 이상의 설정 파일을 사용하는 또 다른 방법
+
+- `AppConf1`에 `@Import` 애노테이션 추가한 클래스
+
+  ```java
+  @Configuration
+  @Import(AppConf2.class)
+  public class AppConfImport {
+  	@Bean
+  	public MemberDao memberDao() {
+  		return new MemberDao();
+  	}
+  	
+  	@Bean
+  	public MemberPrinter memberPrinter() {
+  		return new MemberPrinter();
+  	}
+  }
+  ```
+
+  - `AppConfImport` 설정 클래스를 사용하면 `@Import` 애노테이션에서 지정한 `AppConf2` 설정 클래스도 함께 사용하게 된다
+
+    - 즉 `AppConf2` 설정 클래스를 지정할 필요 없어진다
+
+    ```java
+    ctx = new AnnotationConfigApplicationContext(AppConfImport.class);
+    ```
+
+  - 배열을 이용해 두 개 이상의 설정 클래스도 지정 가능
+
+    ```java
+    @Configuration
+    @Import({AppConf1.class, AppConf2.class})
+    public class AppConfImport{
+        
+    }
+    ```
+
+- 다중 `@Import`
+
+  > Import로 다른 설정을 포함한 설정 클래스가 다시 Import를 사용할 수 있다
+  >
+  > AnnotationConfigApplicationContext를 생성하는 코드에서 **최상위 설정 클래스 한 개만 사용할 수 있다**
+
+
+
+## 9. getBean() 메서드 이용
+
+- `getBean()`메서드 이용해서 빈 객체를 구한다
+
+  ```java
+  VersionPrinter versionPrinter = ctx.getBean("versionPrinter", VersionPrinter.class);
+  ```
+
+  - 첫 인자 : **빈의 이름**
+  - 두번째 인자 : **빈의 타입**
+
+- 익셉션 발생 상황
+
+  1. 존재하지 않는 빈 이름 사용
+
+  2. 빈의 실제 타입과 다른 타입을 지정
+
+     > VersionPrinter.class가 아닌 다른 타입을 넣은 경우
+
+  3. 빈 객체가 존재하지 않을 경우
+
+  4. 타입만으로 빈 구하는데, 빈이 두 개 이상인 경우
+
+- 타입만으로 빈 구하기
+
+  ```java
+  VersionPrinter versionPrinter = ctx.getBean(VersionPrinter.class);
+  ```
+
+  - 해당 타입의 빈 객체가 한 개만 존재하면 해당 빈 구해서 리턴
+  - 빈 객체가 두 개 이상인 경우 익셉션 발생
+
+> 스프링 컨테이너 계층도에서 `getBean()` 메서드는 `BeanFactory` 인터페이스에 정의되어 있고, `AbstractApplicationContext` 클래스에서 구현했다
+
+
+
+## 10. 주입 대상 객체를 모두 빈 객체로 설정해야 되나?
+
+- 주입할 객체가 꼭 스프링 빈이어야 할 필요는 없다.
+
+  - 설정 예
+
+  ```java
+  @Configuration
+  public class AppCtxNoMemberPrinterBean{
+      private MemberPrinter printer = new MemberPrinter();		//빈 아님
+      ...
+      
+      @Bean
+  	public MemberListPrinter listPrinter() {
+  		return new MemberListPrinter(memberDao(), printer);	//사용
+  	}
+  	
+  	@Bean
+  	public MemberInfoPrinter infoPrinter() {
+  		MemberInfoPrinter infoPrinter = new MemberInfoPrinter();
+  		infoPrinter.setMemberDao(memberDao());
+  		infoPrinter.setPrinter(printer);		//사용
+  		return infoPrinter;
+  	}
+      ...
+  }
+  ```
+
+  - `MemberPrinter` 객체를 생성하여 `listPrinter`, `infoPrinter` 빈을 생성했다
+
+- 객체를 스프링 빈으로 등록할 때와 등록하지 않을 때 **차이점**
+
+  - **스프링 컨테이너가 객체를 관리하는지 여부**
+
+  ```java
+  MemberPrinter printer = ctx.getBean(MemberPrinter.class);
+  // MemberPrinter를 빈으로 등록하지 않았다 => 익셉션 발생
+  ```
+
+  > 스프링 컨테이너는
+  > 자동 주입, 라이프사이클 관리 등 객체 관리를 위한 다양한 기능 제공하는데
+  > 빈으로 등록한 객체에만 기능을 제공
+  >
+  > - 이러한 관리 기능이 필요없을 경우 빈 객체로 등록 필요 없음

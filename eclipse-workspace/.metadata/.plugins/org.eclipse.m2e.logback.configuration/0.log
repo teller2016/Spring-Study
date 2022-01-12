@@ -320,3 +320,31 @@
 2022-01-11 22:08:32,929 [Worker-112: Launching MainForSpring] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\main\resources
 2022-01-11 22:08:32,931 [Worker-112: Launching MainForSpring] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
 2022-01-11 22:08:32,933 [Worker-112: Launching MainForSpring] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\test\resources
+2022-01-12 09:32:41,384 [Worker-123: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 09:32:41,387 [Worker-123: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\main\resources
+2022-01-12 09:32:41,389 [Worker-123: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 09:32:41,390 [Worker-123: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\test\resources
+2022-01-12 09:34:09,697 [Worker-127: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 09:34:09,698 [Worker-127: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\main\resources
+2022-01-12 09:34:09,700 [Worker-127: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 09:34:09,701 [Worker-127: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\test\resources
+2022-01-12 09:37:40,364 [Worker-124: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 09:37:40,366 [Worker-124: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\main\resources
+2022-01-12 09:37:40,367 [Worker-124: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 09:37:40,368 [Worker-124: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\test\resources
+2022-01-12 09:37:43,228 [Worker-123: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 09:37:43,229 [Worker-123: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\main\resources
+2022-01-12 09:37:43,230 [Worker-123: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 09:37:43,231 [Worker-123: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\test\resources
+2022-01-12 10:03:54,619 [Worker-132: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 10:03:54,620 [Worker-132: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\main\resources
+2022-01-12 10:03:54,622 [Worker-132: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 10:03:54,623 [Worker-132: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\test\resources
+2022-01-12 10:08:08,463 [Worker-132: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 10:08:08,464 [Worker-132: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\main\resources
+2022-01-12 10:08:08,466 [Worker-132: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 10:08:08,467 [Worker-132: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\test\resources
+2022-01-12 10:09:12,306 [Worker-132: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 10:09:12,308 [Worker-132: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\main\resources
+2022-01-12 10:09:12,309 [Worker-132: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-12 10:09:12,311 [Worker-132: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap03\src\test\resources
