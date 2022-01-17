@@ -918,3 +918,801 @@
 
 ## 6. 스프링의 익셉션 변환 처리
 
+- SQL 문법이 잘못되면 `org.springframework.jdbc` 패키지에 속한 `BadSqlGrammarException` 이 발생한다
+
+  - 이는 `MySQLSyntaxErrorException`이 발생했기 때문이다
+
+  - 발생한 코드
+
+    ```java
+    jdbcTemplate.update("update MEMBER set NAME=?...", member.getName()...)
+    ```
+
+    - `jdbcTemplate` 클래스의 `update()` 메서드가 `BadSqlGrammarException`을 발생시켰다
+
+    - `update()` 메서드는 DB 연동을 위해 JDBC API를 사용하는데, 그 과정에서 SQLException이 발생하면, 이 **익셉션을 알맞은 `DataAccessException`으로 변환해서 발생한다**
+
+      ```java
+      // 이런 유사한 방식으로 변환한다
+      try{
+          ... JDBC 사용코드
+      } catch(SQLException ex){
+          throw convertSqlToDataException(ex);
+      }
+      ```
+
+      > Ex. MySQL용 JDBC 드라이버는 SQL 문법이 잘못되면 `SQLException`을 상속받은 `MySQLSyntaxErrorException`을 발생시키는데
+      > `JdbcTemplate`은 이 익셉션을 `DataAccessException`을 상속받은 `BadSqlGrammarException`으로 변환한다
+
+  - 변환 시키는 이유
+
+    - 연동 기술에 상관없이 동일하게 익셉션 처리할 수 있도록 위함
+
+      > 스프링은 JDBC, JPA, 하이버네이트 등에 대한 다양한 연동을 지원한다
+      > 각각 구현 기술마다 익셉션 처리 코드를 작성해야된다 => 너무 힘듬
+
+- `DataAccessException`은 `RuntimeException`(예외처리 강제성이 없음) 이므로 필요한 경우에만 익셉션을 처리하면 된다
+
+  - JDBC를 직접 이용하는 경우 `try-catch`문을 이용해 익셉션을 처리해야 된다
+
+    ```java
+    // JDBC 직접 사용하면 SQLException을 반드시 알맞게 처리해야 된다
+    try{
+        pstmt = conn.prepareStatement(someQuery);
+        ...
+    } catch(SQLException){
+        ...// 알맞게 처리 필요
+    }
+    ```
+
+  - 스프링을 사용하면 `DataAccessException`을 필요한 경우에만 `try-catch`문으로 처리해주면 된다
+
+    ```java
+    jdbcTemplate.update(someQuery, param1);
+    ```
+
+
+
+## 7. 트랜잭션 처리
+
+- 이메일이 유효한지 검증하는 서비스
+
+  - 이메일에 담긴 링크 클릭하면 검증된다
+
+  - 인증 시점에 테이블의 데이터를 변경하는 기능
+
+    - 회원 정보에서 이메일을 수정하고 인증 상태를 변경하는 쿼리를 실행할 것이다
+
+    ```java
+    jdbcTemplate.update("update MEMBER set EMAIL=?", email);
+    jdbcTemplate.update("insert into EMAIL_AUTH values (?, 'T')", email);
+    ```
+
+- **첫번째 쿼리 실행 후 두번째 쿼리 실행 중 문제가 발생하면?**
+  - 두번째 쿼리 실행이 실패하면 **첫번째 쿼리 실행 결과도 취소해야 올바른 상태가 된다**
+
+#### **두 개 이상의 쿼리를 한 작업으로 실행해야 할 때 사용하는 것이 `트랜잭션(transaction)`이다**
+
+- 트랜잭션은 여러 쿼리를 논리적으로 하나의 작업으로 묶어준다
+  - 한 트랜잭션으로 묶인 쿼리 중 하나라도 실패하면 전체 쿼리를 실패로 간주하여 **이전에 실행한 쿼리를 취소한다**
+  - 이를 **롤백(rollback)**이라 한다
+  - 모든 쿼리 성공하여 DB에 실제로 반영하는 건 **`커밋(commit)`**이라 한다
+
+- 트랜잭션 시작하면 트랜잭션을 커밋하거나 롤백할 때까지 실행한 쿼리들이 **하나의 작업 단위가 된다**
+
+- JDBC는 Connection의 `setAutoCommit(false)`를 이용해 트랜잭션 시작하고 `commit()`, `rollback()`으로 커밋, 롤백한다
+
+  ```java
+  Connection conn = null;
+  try{
+      conn = DriverManager.getConnection(jdbcUrl, user, pw);
+      conn.setAutoCommit(false);		//트랜잭션 범위 시작
+      
+      ... //쿼리 실행
+          
+      conn.commit();	//트랜잭션 범위 종료 : 커밋
+      
+  } catch(SQLException ex){
+      if(conn!=null)
+          try{conn.rollback();} catch(SQLException e) {}	//트랜잭션 범위 종료 : 롤백
+  } finally{
+      if (conn!=null)
+          try{conn.close();} catch(SQLException e) {}
+  }
+  ```
+
+  - 코드로 직접 트랜잭션 범위를 관리하기에 커밋, 롤백 코드를 누락하기 쉽다
+  - 반복되는 구조 발생
+
+- 스프링이 제공하는 트랜잭션 기능을 사용하면 간단한 코드로 트랜잭션 범위 지정 가능
+
+### 7.1 @Transactional을 이용한 트랜잭션 처리
+
+- **`@Transactional` 애노테이션으로 트랜잭션 범위를 매우쉽게 지정할 수 있다**
+
+  - 트랜잭션 범위에서 실행하고 싶은 메서드에 `@Transactional`을 붙이면 된다
+
+  ```java
+  	@Transactional
+  	public void changePassword(String email, String oldPwd, String newPwd) {
+  		Member member = memberDao.selectByEmail(email);		//selectByEmail() 에서 실행하는 쿼리도 한 트랜잭션에 묶인다
+  		
+  		if(member == null)
+  			throw new MemberNotFoundException();
+  		
+  		member.changePassword(oldPwd, newPwd);
+  		
+  		memberDao.update(member);
+  	}
+  ```
+
+  - 스프링은 `@Transactional`이 붙은 `changePassword()` 메서드를 동일한 트랜잭션 범위에서 실행한다
+    - `memberDao.selectByEmail()`에서 실행하는 쿼리와 `member.changePasword()`에서 실행하는 쿼리는 한 트랜잭션에 묶인다
+
+#### @Transactional이 동작하기 위하 두 가지 스프링 설정
+
+> - 플랫폼 트랜잭션 매니저(PlatformTransactionManager) 빈 설정
+> - `@Transactional` 애노테이션 활성화 설정
+
+- 예(빈 설정)
+
+  ```java
+  @Configuration
+  @EnableTransactionManagement		//설정
+  public class AppCtx {
+  	
+  	@Bean(destroyMethod = "close")
+  	public DataSource dataSource() {
+  		DataSource ds = new DataSource();
+  		...
+  		return ds;
+  	}
+  	
+  	@Bean
+  	public PlatformTransactionManager transactionManager() {		//추가
+  		DataSourceTransactionManager tm = new DataSourceTransactionManager();
+  		tm.setDataSource(dataSource());
+  		return tm;
+  	}
+  	
+  	...
+  	
+  }
+  ```
+
+  - `DataSourceTransactionManager` 클래스를 `PlatformTransactionManager`로 사용
+  - `dataSource` 프로퍼티를 이용해 트랜잭션 연동에 사용한 `DataSource`를 지정
+
+- `PlatformTransactionManager`는 스프링이 제공하는 트랜잭션 매니저 인터페이스이다
+
+  - **구현기술에 상관없이 동일한 방식으로 트랜잭션 처리를 위해** 이 인터페이스 사용
+
+- `EnableTransactionManagement` 애노테이션은 `@Transactional`이 붙은 메서드를 트랜잭션 범위에서 실행하는 기능을 활성화한다
+  - `PlatformTransactionManager`빈으로 트랜잭션을 적용한다
+
+
+
+- 트랜잭션 범위에서 실행하고 싶은 **스프링 빈 객체의 메서드에 `@Transactional`을 붙이면 된다**
+
+  ```java
+  public class ChangePasswordService {
+  	private MemberDao memberDao;
+  	
+  	@Transactional
+  	public void changePassword(String email, String oldPwd, String newPwd) {
+  		Member member = memberDao.selectByEmail(email);
+  		
+  		if(member == null)
+  			throw new MemberNotFoundException();
+  		
+  		member.changePassword(oldPwd, newPwd);
+  		
+  		memberDao.update(member);
+  	}
+  	
+  	public void setMemberDao(MemberDao memberDao) {
+  		this.memberDao = memberDao;
+  	}
+  }
+  ```
+
+- `ChangePasswordService` 클래스를 빈으로 추가
+
+  ```java
+  @Configuration
+  @EnableTransactionManagement
+  public class AppCtx {
+  	
+  	@Bean(destroyMethod = "close")
+  	public DataSource dataSource() {
+  		DataSource ds = new DataSource();
+  		ds.setDriverClassName("com.mysql.jdbc.Driver");
+  		ds.setUrl("jdbc:mysql://localhost/spring5fs?characterEncoding=utf8&useSSL=false");
+  		ds.setUsername("spring5");
+  		ds.setPassword("spring5");
+  		ds.setInitialSize(2);
+  		ds.setMaxActive(10);
+  
+          ds.setTestWhileIdle(true);		// 유휴 커넥션 검사
+          ds.setMinEvictableIdleTimeMillis(1000 * 60 * 3);	// 최소 유휴 시간 3분
+          ds.setTimeBetweenEvictionRunsMillis(1000 * 10);		// 10초 주기
+          
+  		return ds;
+  	}
+  	
+  	@Bean
+  	public PlatformTransactionManager transactionManager() {
+  		DataSourceTransactionManager tm = new DataSourceTransactionManager();
+  		tm.setDataSource(dataSource());
+  		return tm;
+  	}
+  	
+  	@Bean
+  	public MemberDao memberDao() {
+  		return new MemberDao(dataSource());
+  	}
+  	
+  	@Bean
+  	public ChangePasswordService changePwdSvc() {		// 빈으로 추가
+  		ChangePasswordService pwdSvc = new ChangePasswordService();
+  		pwdSvc.setMemberDao(memberDao());
+  		return pwdSvc;
+  	}
+  	
+  }
+  ```
+
+- 실행 클래스 작성
+
+  ```java
+  public class MainForCPS {
+  
+  	public static void main(String[] args) {
+  		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(AppCtx.class);
+  		
+  		ChangePasswordService cps = ctx.getBean("changePwdSvc", ChangePasswordService.class);
+  		
+  		try {
+  			cps.changePassword("molly@naver.com", "1234", "1111");
+  			System.out.println("암호를 변경했습니다");
+  		} catch(MemberNotFoundException e) {
+  			System.out.println("회원 데이터가 존재하지 않습니다");
+  		} catch(WrongIdPasswordException e) {
+  			System.out.println("암호가 올바르지 않습니다");
+  		}
+  		
+  		ctx.close();
+  	}
+  
+  }
+  ```
+
+  - 트랜잭션 시작되고 커밋되는지 확인 안됨
+
+- 트랜잭션과 관련된 로그 메시지를 출력하기 위해 `Logback`을 사용
+
+  > 스프링 5 버전은 자체 로깅 모듈 spring-jcl을 사용
+  >
+  > - 직접 로그를 남기지 않고 다른 로깅 모듈을 사용해서 로그를 남긴다
+
+  - `pom.xml` 파일에 `Logback` 모듈 추가
+
+    ```xml
+    ...		
+    		<dependency>
+    			<groupId>org.slf4j</groupId>
+    			<artifactId>slf4j-api</artifactId>
+    			<version>1.7.25</version>
+    		</dependency>
+    
+    		<dependency>
+    			<groupId>ch.qos.logback</groupId>
+    			<artifactId>logback-classic</artifactId>
+    			<version>1.2.3</version>
+    		</dependency>
+    ```
+
+  - `Logback` 설정 파일을 위한 `src/main/resources` 폴더 추가
+
+- `Logback`은 로그 메시지 형식과 기록 위치를 설정 파일에서 읽어온다
+
+  ```xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  
+  <configuration>
+  	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+  		<encoder>
+  			<pattern>%d %5p %c{2} - %m%n</pattern>
+  		</encoder>
+  	</appender>
+  	<root level="INFO">
+  		<appender-ref ref="stdout" />
+  	</root>
+  
+  	<logger name="org.springframework.jdbc" level="DEBUG" />
+  </configuration>
+  ```
+
+- `MainForCPS` 실행 결과
+
+  ```java
+  /*
+  2022-01-17 17:37:54,126 DEBUG o.s.j.d.DataSourceTransactionManager - Switching JDBC Connection [ProxyConnection...] to manual commit
+  2022-01-17 17:37:54,140 DEBUG o.s.j.c.JdbcTemplate - Executing prepared SQL query
+  2022-01-17 17:37:54,141 DEBUG o.s.j.c.JdbcTemplate - Executing prepared SQL statement [select * from MEMBER where EMAIL = ?]
+  2022-01-17 17:37:54,173 DEBUG o.s.j.c.JdbcTemplate - Executing prepared SQL update
+  2022-01-17 17:37:54,174 DEBUG o.s.j.c.JdbcTemplate - Executing prepared SQL statement [update MEMBER set NAME=?, PASSWORD=? where EMAIL=?]
+  2022-01-17 17:37:54,177 DEBUG o.s.j.c.JdbcTemplate - SQL update affected 1 rows
+  2022-01-17 17:37:54,178 DEBUG o.s.j.d.DataSourceTransactionManager - Initiating transaction commit
+  2022-01-17 17:37:54,179 DEBUG o.s.j.d.DataSourceTransactionManager - Committing JDBC transaction on Connection [ProxyConnection[PooledConnection[com.mysql.jdbc.JDBC4Connection@3f053c80]]]
+  2022-01-17 17:37:54,182 DEBUG o.s.j.d.DataSourceTransactionManager - Releasing JDBC Connection [ProxyConnection[PooledConnection[com.mysql.jdbc.JDBC4Connection@3f053c80]]] after transaction
+  2022-01-17 17:37:54,182 DEBUG o.s.j.d.DataSourceUtils - Returning JDBC Connection to DataSource
+  암호를 변경했습니다
+  ```
+
+  - 변경 실패의 경우 트랜잭션을 롤백했다는 로그 메시지가 찍힌다
+
+- 트랜잭션을 시작하고, 커밋하고, 롤백하는 건 누가 어떻게 처리하는 걸까?
+
+### 7.2 @Transactional과 프록시
+
+- 여러 빈 객체에 공통으로 적용되는 기능을 구현하는 방법으로 AOP를 사용한다
+
+  - 트랜잭션도 공통 기능 중 하나이다
+  - 트랜잭션 처리도 프록시를 통해 이루어진다
+
+- `@EnableTransactionManagement`를 사용하면 `@Transactional`이 적용된 빈 객체를 찾아서 알맞은 프록시 객체를 생성한다
+
+  > `ChangePasswordService` 클래스의 메서드에 `@Transactional`이 적용되었으므로 트랜잭션 기능을 적용할 프록시 객체를 생성한다
+  > `MainForCPS`에서 `getBean("changePwdSvc", ChangePasswordService)` 코드 실행시 `ChangePasswordService` 대신에 프록시 객체가 리턴된다
+  >
+  > 이 프록시 객체는 `@Transactional` 붙은 메서드를 호출하면 `PlatformTransactionManager`를 사용해 트랜잭션을 시작한다
+  >
+  > - 트랜잭션을 시작한 후에 **실제 객체의 메서드(암호변경)를 호출하고**, 성공적으로 실행되면 커밋한다
+
+### 7.3 @Transactional 적용 메서드의 롤백 처리
+
+- 롤백을 처리하는 주체 또한 프록시 객체이다
+
+- 예제 코드
+
+  ```java
+  		try {
+  			cps.changePassword("molly@naver.com", "1234", "1111");
+  			System.out.println("암호를 변경했습니다");
+  		} catch(MemberNotFoundException e) {
+  			System.out.println("회원 데이터가 존재하지 않습니다");
+  		} catch(WrongIdPasswordException e) {
+  			System.out.println("암호가 올바르지 않습니다");
+  		}
+  ```
+
+  - `WrongIdPasswordException`이 발생했을 때 트랜잭션이 롤백 됐다
+    - **원본 객체의 메서드를 실행하는 과정에서 `RuntimeException`이 발생하면 프록시 객체가 롤백한다**
+    - 별도 설정 없으면 발생한 익셉션이 `RuntimeException`일때 롤백한다
+    - **`WrongIdPasswordException` 클래스 구현에서 `RuntimeException`을 상속한 이유가 이거다**
+
+- `JdbcTemplate`은 DB 연동 문제 있으면 `DataAccessException`을 발생시킨다
+
+  - `DataAccessException`도 `RuntimeException`을 상속받는다
+  - 즉 `JdbcTemplate` 기능 사용중 익셉션 발생시 프록시는 롤백을 한다
+
+- `SQLException`은 `RuntimeException`을 상속하지 않는다
+
+  - 발생시 롤백하지 않는다
+
+  - **추가하고 싶으면 `@Transaction`의 `rollbackFor` 속성 사용**
+
+    ```java
+    @Transactional(rollbackFor = SQLException.class) // (rollbackFor = {SQLException.class, IOException.class}) 로 여러개 지정
+    public void someMethod(){
+        ...
+    }
+    ```
+
+  - **`rollbackFor` 속성을 설정하면 `RuntimeException`과 `SQLException`이 발생하는 경우에도 트랜잭션 롤백한다**
+
+  - **`noRollbackFor`** 속성은 지정한 익셉션이 발생해도 **롤백시키지 않도록 한다**
+
+### 7.4 @Transactional의 주요 속성
+
+- 주요 속성
+
+  | 속성        | 타입        | 설명                                                         |
+  | ----------- | ----------- | ------------------------------------------------------------ |
+  | value       | String      | 트랜잭션을 관리할 때 사용할 PlatformTransactionManager 빈의 이름을 지정한다. <br />기본값은 ""이다 |
+  | propagation | Propagation | 트랜잭션 전파 타입을 지정한다. <br />기본값은 Propagation.REQUIRED |
+  | isolation   | Isolation   | 트랜잭션 격리 레벨을 지정한다. <br />기본값은 Isolation.DEFAULT |
+  | timeout     | int         | 트랜잭션 제한 시간을 지정한다. <br />기본값은 -1로 이 경우 데이터베이스의 타임아웃 시간을 사용한다. 초 단위로 지정 |
+
+- `@Transactional`의 `value` 속성값이 없으면 등록된 빈 중에서 `PlatformTransactionManager `의 빈을 사용한다
+
+  ```java
+  //	AppCtx 설정 클래스의 플랫폼 트랜잭션 매니저 빈 설정
+  	@Bean
+  	public PlatformTransactionManager transactionManager() {
+  		DataSourceTransactionManager tm = new DataSourceTransactionManager();
+  		tm.setDataSource(dataSource());
+  		return tm;
+  	}
+  ```
+
+- `Propagation` 열거 타입의 주요 값
+
+  | 값            | 설명                                                         |
+  | ------------- | ------------------------------------------------------------ |
+  | REQUIRED      | 메서드를 수행하는데 트랜잭션이 필요하다는 것을 의미. 현재 진행중인 트랜잭션이 존재하면 해당 트랜잭션을 사용. 존재하지 않으면 새로운 트랜잭션 생성 |
+  | MANDATORY     | 메서드를 수행하는데 트랜잭션이 필요하다는 것을 의미. REQUIRED와 달리 진행 중인 트랜잭션이 존재하지 않을 경우 익셉션 발생 |
+  | REQUIRES_NEW  | 항상 새로운 트랜잭션을 시작. 진행 중이 트랜잭션 존재하면 기존 트랜잭션을 일시 중지하고 새로운 트랜잭션 시작. 새로 시작된 트랜잭션이 종료된 뒤에 기존 트랜잭션이 계속된다 |
+  | SUPPORTS      | 메서드가 트랜잭션을 필요로 하지는 않지만, 진행 중인 트랜잭션이 존재하면 트랜잭션을 사용. 진행 중인 트랜잭션이 존재하지 않더라도 메서드는 정상적으로 동작한다 |
+  | NOT_SUPPORTED | 메서드가 트랜잭션을 필요로 하지 않음을 의미. SUPPORTS와 달리 진행 중인 트랜잭션이 존재할 경우 메서드가 실행되는 동안 트랜잭션은 일시 중지되고 메서드 실행이 종료된 후에 트랜잭션을 계속 진행한다 |
+  | NEVER         | 메서드가 트랜잭션을 필요로 하지 않는다. 만약 진행 중인 트랜잭션이 존재하면 익셉션 발생 |
+  | NESTED        | 진행 중인 트랜잭션 존재하면 기존 트랜잭션에 중첩된 트랜잭션에서 메서드를 실행한다. 진행 중인 트랜잭션이 존재하지 않으면 REQUIRED와 동일하게 작동. 이 기능은 JDBC 3.0 드라이버를 사용할 때에만 적용된다 |
+
+- `Isolation` 열거 타입에 정의된 값
+
+  | 값               | 설명                                                         |
+  | ---------------- | ------------------------------------------------------------ |
+  | DEFAULT          | 기본 설정을 사용한다                                         |
+  | READ_UNCOMMITTED | 다른 트랜잭션이 커밋하지 않은 데이터를 읽을 수 있다          |
+  | READ_COMMITTED   | 다른 트랜잭션이 커밋한 데이터를 읽을 수 있다                 |
+  | REPEATABLE_READ  | 처음에 읽어 온 데이터와 두 번째 읽어 온 데이터가 동일한 값을 갖는다 |
+  | SERIALIZABLE     | 동일한 데이터에 대해서 동시에 두 개 이상의 트랜잭션을 수행할 수 없다 |
+
+  > 트랜잭션 격리 레벨은 동시에 DB에 접근할 때 그 접근을 어떻게 제어할지에 대한 설정이다
+  >
+  > 레벨을 SERIALIZABLE로 설정하면 100개 연결이 접근해도 1개의 연결만 처리한다 => 응답 속도 느려짐
+
+### 7.5 @EnableTransactionManagement 애노테이션의 주요 속성
+
+- `@EnableTransactionManagement` 속성
+
+  | 속성             | 설명                                                         |
+  | ---------------- | ------------------------------------------------------------ |
+  | proxyTargetClass | 클래스를 이용해서 프록시를 생성할지 여부를 지정한다. 기본값은 false로서 인터페이스를 이용해서 프록시를 생성한다 |
+  | order            | AOP 적용 순서를 지정한다. 기본값은 가장 낮은 우선순위에 해당하는 int의 최댓값이다 |
+
+### 7.6 트랜잭션 전파
+
+```java
+public class SomeService{
+    private AnyService anyService;
+    
+    @Transactional
+    public void some(){
+        anyService.any();
+    }
+    
+    public void setAnyService(AnyService as){
+        this.anyService = as;
+    }
+}
+
+public class AnyService{
+    @Transactional
+    public void any(){...}
+}
+```
+
+```java
+@Configuration
+@EnableTransactionManagement
+public class Config{
+    @Bean
+    public SomeService some(){
+        SomeService some = new SomeService();
+        some.setAnyService(any());
+        return some;
+    }
+    
+    @Bean
+    public AnyService any(){
+        return new AnyService();
+    }
+    
+    //DataSourceTransactionManager 빈 설정
+    // DataSource 설정
+}
+```
+
+- `SomeService`, `AnyService` 둘다 `@Transactional`를 적용하고 있다
+
+  - 두 클래스에 대해 프록시 생성된다
+    - `SomeService`의 `some()`메서드 호출하면 트랜잭션 시작되고
+    - `AnyService`의 `any()` 메서드 호출하면 트랜잭션 시작된다
+    - **그런데 `some()` 메서드 내부에서 `any()` 메서드를 호출하고 있다**
+      - 이런 경우 트랜잭션 처리가 어떻게 될까?
+
+- `@Transactional`의 `propagation` 속성의 기본값은 `Propagation.REQUIRED`이다
+
+  - `REQUIRED` : 현재 진행 중인 트랜잭션이 존재하면 해당 트랜잭션을 사용하고 존재하지 않으면 새로운 트랜잭션을 생성한다
+
+  > 처음 `some()` 메서드 호출하면 트랜잭션이 새로 시작된다
+  > `some()` 내부의 `any()`를 호출하면 이미 시작된 트랜잭션이 존재하므로, 새로 생성하지 않는다. 그대로 사용한다
+  >
+  > - 즉 `some()`, `any()`메서드를 한 트랜잭션을 묶어서 실행하는 것이다
+
+  - `REQUIRED_NEW` 사용하면
+
+  > - `any()` 메서드에 의해 트랜잭션이 새롭게 하나더 생성된다
+
+
+
+- 다음 코드 확인
+
+  ```java
+  public class ChangePasswordService {
+  	...
+  	@Transactional
+  	public void changePassword(String email, String oldPwd, String newPwd) {
+  		Member member = memberDao.selectByEmail(email);
+  		
+  		if(member == null)
+  			throw new MemberNotFoundException();
+  		
+  		member.changePassword(oldPwd, newPwd);
+  		
+  		memberDao.update(member);		//MemberDao의 update()
+  	}
+  	...
+  }
+  ```
+
+  ```java
+  public class MemberDao {
+  
+  	private JdbcTemplate jdbcTemplate;
+  	...
+          
+      // @Transactional 없음
+  	public void update(Member member) {
+  		jdbcTemplate.update("update MEMBER set NAME=?, PASSWORD=? where EMAIL=?",
+  				member.getName(), member.getPassword(), member.getEmail());
+  
+  	}
+  	...
+  }
+  ```
+
+  - `changePassword()`는 `MemberDao`의 `update()` 메서드를 호출한다
+    - 그런데 `update()`는 `@Transactional` 처리 안되어있다
+    - 트랜잭션 처리 어떻게 될까?
+
+- `JdbcTemplate` 클래스 덕에 트랜잭션 범위 내에서 `update()`의 쿼리 실행할 수 있다
+
+  - **`JdbcTemplate`은 진행 중인 트랜잭션이 존재하면 해당 트랜잭션 범위 내에서 쿼리를 실행한다**
+
+  > `ChangePasswordService`의 `@Transactional`이 붙은 메서드를 실행하면 프록시가 트랜잭션을 시작한다
+  >
+  > -  `selectByEmail()` 진행중 `JdbcTemplate`을 실행한다 (트랜잭션이 진행 중인 상태)
+  > - `update()` 진행중 `JdbcTemplate`을 실행한다 (트랜잭션이 진행 중인 상태)
+  >   - 이 경우 `JdbcTemplate`은 **이미 진행 중인 트랜잭션 범위에서 쿼리를 실행한다**
+  >   - 그러므로 `changePassword()` 메서드에서 실행하는 쿼리는 모두 하나의 트랜잭션 범위에서 실행된다
+
+
+
+## 8. 전체 기능 연동한 코드 실행
+
+- `AppCtx`
+
+  ```java
+  package config;
+  
+  import org.apache.tomcat.jdbc.pool.DataSource;
+  import org.springframework.context.annotation.Bean;
+  import org.springframework.context.annotation.Configuration;
+  import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+  import org.springframework.transaction.PlatformTransactionManager;
+  import org.springframework.transaction.annotation.EnableTransactionManagement;
+  
+  import spring.ChangePasswordService;
+  import spring.MemberDao;
+  import spring.MemberInfoPrinter;
+  import spring.MemberListPrinter;
+  import spring.MemberPrinter;
+  import spring.MemberRegisterService;
+  
+  @Configuration
+  @EnableTransactionManagement
+  public class AppCtx {
+  	
+  	@Bean(destroyMethod = "close")
+  	public DataSource dataSource() {
+  		DataSource ds = new DataSource();
+  		ds.setDriverClassName("com.mysql.jdbc.Driver");
+  		ds.setUrl("jdbc:mysql://localhost/spring5fs?characterEncoding=utf8&useSSL=false");
+  		ds.setUsername("spring5");
+  		ds.setPassword("spring5");
+  		ds.setInitialSize(2);
+  		ds.setMaxActive(10);
+  
+          ds.setTestWhileIdle(true);		// 유휴 커넥션 검사
+          ds.setMinEvictableIdleTimeMillis(1000 * 60 * 3);	// 최소 유휴 시간 3분
+          ds.setTimeBetweenEvictionRunsMillis(1000 * 10);		// 10초 주기
+          
+  		return ds;
+  	}
+  	
+  	@Bean
+  	public PlatformTransactionManager transactionManager() {
+  		DataSourceTransactionManager tm = new DataSourceTransactionManager();
+  		tm.setDataSource(dataSource());
+  		return tm;
+  	}
+  	
+  	@Bean
+  	public MemberDao memberDao() {
+  		return new MemberDao(dataSource());
+  	}
+  	
+  	@Bean
+  	public MemberRegisterService memberRegSvc() {
+  		return new MemberRegisterService(memberDao());
+  	}
+  	
+  	@Bean
+  	public ChangePasswordService changePwdSvc() {
+  		ChangePasswordService pwdSvc = new ChangePasswordService();
+  		pwdSvc.setMemberDao(memberDao());
+  		return pwdSvc;
+  	}
+  	
+  	@Bean
+  	public MemberPrinter memberPrinter() {
+  		return new MemberPrinter();
+  	}
+  
+  	@Bean
+  	public MemberListPrinter listPrinter() {
+  		return new MemberListPrinter(memberDao(), memberPrinter());
+  	}
+  
+  	@Bean
+  	public MemberInfoPrinter infoPrinter() {
+  		MemberInfoPrinter infoPrinter = new MemberInfoPrinter();
+  		infoPrinter.setMemberDao(memberDao());
+  		infoPrinter.setPrinter(memberPrinter());
+  		return infoPrinter;
+  	}
+  }
+  ```
+
+- `Main`
+
+  ```java
+  package main;
+  
+  import java.io.BufferedReader;
+  import java.io.IOException;
+  import java.io.InputStreamReader;
+  
+  import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+  
+  import config.AppCtx;
+  import spring.ChangePasswordService;
+  import spring.DuplicateMemberException;
+  import spring.MemberInfoPrinter;
+  import spring.MemberListPrinter;
+  import spring.MemberNotFoundException;
+  import spring.MemberRegisterService;
+  import spring.RegisterRequest;
+  import spring.WrongIdPasswordException;
+  
+  import config.AppCtx;
+  
+  public class Main {
+  	
+  	private static AnnotationConfigApplicationContext ctx = null;
+  
+  	public static void main(String[] args) throws IOException {
+  		ctx = new AnnotationConfigApplicationContext(AppCtx.class);
+  
+  		BufferedReader reader =new BufferedReader(new InputStreamReader(System.in));
+  		
+  		while (true) {
+  			System.out.println("명렁어를 입력하세요:");
+  			String command = reader.readLine();
+  			if (command.equalsIgnoreCase("exit")) {
+  				System.out.println("종료합니다.");
+  				break;
+  			}
+  			if (command.startsWith("new ")) {
+  				processNewCommand(command.split(" "));
+  			} else if (command.startsWith("change ")) {
+  				processChangeCommand(command.split(" "));
+  			} else if (command.equals("list")) {
+  				processListCommand();
+  			} else if (command.startsWith("info ")) {
+  				processInfoCommand(command.split(" "));
+  			} else {
+  				printHelp();
+  			}
+  		}
+  		ctx.close();
+  	}
+  
+  	private static void processNewCommand(String[] arg) {
+  		if (arg.length != 5) {
+  			printHelp();
+  			return;
+  		}
+  		MemberRegisterService regSvc =
+  				ctx.getBean("memberRegSvc", MemberRegisterService.class);
+  		RegisterRequest req = new RegisterRequest();
+  		req.setEmail(arg[1]);
+  		req.setName(arg[2]);
+  		req.setPassword(arg[3]);
+  		req.setConfirmPassword(arg[4]);
+  
+  		if (!req.isPasswordEqualToConfirmPassword()) {
+  			System.out.println("암호와 확인이 일치하지 않습니다.\n");
+  			return;
+  		}
+  		try {
+  			regSvc.regist(req);
+  			System.out.println("등록했습니다.\n");
+  		} catch (DuplicateMemberException e) {
+  			System.out.println("이미 존재하는 이메일입니다.\n");
+  		}
+  	}
+  
+  	private static void processChangeCommand(String[] arg) {
+  		if (arg.length != 4) {
+  			printHelp();
+  			return;
+  		}
+  		ChangePasswordService changePwdSvc =
+  				ctx.getBean("changePwdSvc", ChangePasswordService.class);
+  		try {
+  			changePwdSvc.changePassword(arg[1], arg[2], arg[3]);
+  			System.out.println("암호를 변경했습니다.\n");
+  		} catch (MemberNotFoundException e) {
+  			System.out.println("존재하지 않는 이메일입니다.\n");
+  		} catch (WrongIdPasswordException e) {
+  			System.out.println("이메일과 암호가 일치하지 않습니다.\n");
+  		}
+  	}
+  
+  	private static void processListCommand() {
+  		MemberListPrinter listPrinter =
+  				ctx.getBean("listPrinter", MemberListPrinter.class);
+  		listPrinter.printAll();
+  	}
+  
+  	private static void processInfoCommand(String[] arg) {
+  		if (arg.length != 2) {
+  			printHelp();
+  			return;
+  		}
+  		MemberInfoPrinter infoPrinter =
+  				ctx.getBean("infoPrinter", MemberInfoPrinter.class);
+  		infoPrinter.printMemberInfo(arg[1]);
+  	}
+  
+  	private static void printHelp() {
+  		System.out.println();
+  		System.out.println("잘못된 명령입니다. 아래 명령어 사용법을 확인하세요.");
+  		System.out.println("명령어 사용법:");
+  		System.out.println("new 이메일 이름 암호 암호확인");
+  		System.out.println("change 이메일 현재비번 변경비번");
+  		System.out.println("info 이메일");
+  
+  		System.out.println();
+  	}
+  }
+  /*
+  명렁어를 입력하세요:
+  list
+  2022-01-17 18:52:03,309 DEBUG o.s.j.c.JdbcTemplate - Executing SQL query [select * from MEMBER]
+  2022-01-17 18:52:03,315 DEBUG o.s.j.d.DataSourceUtils - Fetching JDBC Connection from DataSource
+  1월 17, 2022 6:52:03 오후 org.apache.tomcat.jdbc.pool.ConnectionPool checkPoolConfiguration
+  WARNING: maxIdle is larger than maxActive, setting maxIdle to: 10
+  2022-01-17 18:52:03,669 DEBUG o.s.j.d.DataSourceUtils - Returning JDBC Connection to DataSource
+  회원 정보: 아이디=1, 이메일=molly@naver.com, 이름=molly, 등록일=2022-01-16
+  회원 정보: 아이디=2, 이메일=0117003426@test.com, 이름=0117003426, 등록일=2022-01-17
+  회원 정보: 아이디=3, 이메일=0117004157@test.com, 이름=0117004157, 등록일=2022-01-17
+  회원 정보: 아이디=4, 이메일=0117145947@test.com, 이름=0117145947, 등록일=2022-01-17
+  명렁어를 입력하세요:
+  ```
+
+  
