@@ -1049,7 +1049,7 @@
   - 스프링은 `@Transactional`이 붙은 `changePassword()` 메서드를 동일한 트랜잭션 범위에서 실행한다
     - `memberDao.selectByEmail()`에서 실행하는 쿼리와 `member.changePasword()`에서 실행하는 쿼리는 한 트랜잭션에 묶인다
 
-#### @Transactional이 동작하기 위하 두 가지 스프링 설정
+#### @Transactional이 동작하기 위한 두 가지 스프링 설정
 
 > - 플랫폼 트랜잭션 매니저(PlatformTransactionManager) 빈 설정
 > - `@Transactional` 애노테이션 활성화 설정

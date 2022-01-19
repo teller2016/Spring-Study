@@ -1219,3 +1219,22 @@
 2022-01-18 23:08:01,194 [Worker-10: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap09\src\main\resources
 2022-01-18 23:08:01,200 [Worker-10: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
 2022-01-18 23:08:01,203 [Worker-10: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap09\src\test\resources
+2022-01-18 23:18:10,835 [Worker-25: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-18 23:18:10,837 [Worker-25: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap09\src\main\resources
+2022-01-18 23:18:10,840 [Worker-25: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-18 23:18:10,841 [Worker-25: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap09\src\test\resources
+2022-01-18 23:19:06,053 [Worker-22: Updating Maven Project] INFO  o.e.m.c.i.p.ProjectConfigurationManager - Update started
+2022-01-18 23:19:06,533 [Worker-22: Updating Maven Project] INFO  o.e.m.c.i.l.LifecycleMappingFactory - Using org.eclipse.m2e.jdt.JarLifecycleMapping lifecycle mapping for MavenProject: sp5:sp5-chap09:0.0.1-SNAPSHOT @ C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap09\pom.xml.
+2022-01-18 23:19:06,922 [Worker-22: Updating Maven Project] INFO  o.e.m.j.i.AbstractJavaProjectConfigurator - Adding source folder /sp5-chap09/src/main/java
+2022-01-18 23:19:06,929 [Worker-22: Updating Maven Project] INFO  o.e.m.j.i.AbstractJavaProjectConfigurator - Adding source folder /sp5-chap09/src/test/java
+2022-01-18 23:19:07,142 [Worker-22: Updating Maven Project] INFO  o.e.m.c.i.p.ProjectConfigurationManager - Update completed: 1 sec
+2022-01-18 23:19:07,384 [Worker-26: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-18 23:19:07,387 [Worker-26: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap09\src\main\resources
+2022-01-18 23:19:07,389 [Worker-26: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-18 23:19:07,391 [Worker-26: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap09\src\test\resources
+2022-01-18 23:20:50,956 [Worker-25: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-18 23:20:50,958 [Worker-25: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap09\src\main\resources
+2022-01-18 23:20:50,960 [Worker-25: Building] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (MS949 actually) to copy filtered resources, i.e. build is platform dependent!
+2022-01-18 23:20:50,963 [Worker-25: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\ONEDRIVE\OneDrive - 아주대학교\Spring Study\eclipse-workspace\sp5-chap09\src\test\resources
+2022-01-19 15:39:40,910 [Worker-5: Loading available Gradle versions] INFO  o.e.b.c.i.u.g.PublishedGradleVersions - Gradle version information cache is out-of-date. Trying to update.
+2022-01-19 15:39:55,486 [Worker-2: Decoration Calculation] WARN  org.eclipse.jgit.util.FS - Cannot run program "\usr\bin\git" (in directory "\usr\bin"): CreateProcess error=2, 지정된 파일을 찾을 수 없습니다
